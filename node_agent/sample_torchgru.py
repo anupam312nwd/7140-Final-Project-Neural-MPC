@@ -1,9 +1,9 @@
-import os
+
 import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
 
 # parser = argparse.ArgumentParser('vGRU demo')
 # parser.add_argument('--method', type=str, choices=['dopri5', 'adams'], default='dopri5')
@@ -18,14 +18,22 @@ import matplotlib.pyplot as plt
 
 # device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
-data_states = np.load('trial1_states.npy')
-data_actions = np.load('trial1_actions.npy')
-data_next_states = np.load('trial1_next_states.npy')
+# import sys
+# import os.path as path
+
+# sys.path.insert(1, path.abspath(path.join(__file__ , "../")))
+# filename = "data"
+# print(filename)
+
+data_states = np.load('data/trial1_states.npy')
+data_actions = np.load('data/trial1_actions.npy')
+data_next_states = np.load('data/trial1_next_states.npy')
 
 input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis = 1))
 output_data = torch.from_numpy(data_next_states)
 
 N = input_data.shape[0]
+print(N)
 
 data = []
 for i in range(N):
@@ -109,7 +117,7 @@ for i in range(epochs):
 
             y_pred = model(seq)
 
-            loss = criterion(y_pred.float(), y_train.float())
+            loss = criterion(y_pred.float(), y_test.float())
             sum_loss += loss
 
         test_loss.append(sum_loss/N_test)
@@ -118,6 +126,10 @@ for i in range(epochs):
 
 plt.plot(train_loss)
 plt.plot(test_loss)
+plt.show()
+
+torch.save(model.state_dict(), 'node_agent/sample_torchgru.pt')
+
 
 # if __name__ == '__main__':
 
