@@ -14,14 +14,22 @@ import numpy as np
 # parser.add_argument('--gpu', type=int, default=0)
 # args = parser.parse_args()
 
-device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
 data_states = np.load('trial1_states.npy')
 data_actions = np.load('trial1_actions.npy')
 data_next_states = np.load('trial1_next_states.npy')
 
-train_data = np.concatenate((data_states, data_actions), axis = 1)
-test_data = data_next_states
+input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis = 1))
+output_data = torch.from_numpy(data_next_states)
+
+input_data.shape, output_data.shape, type(input_data)
+
+train_data = []
+for i in range(input_data.shape[0]):
+    train_data.append((input_data[i], output_data[i]))
+
+print(len(train_data))
 
 class vGRU(nn.Module):
 
@@ -29,6 +37,7 @@ class vGRU(nn.Module):
 
         super().__init__()
 
+        self.hidden_size = hidden_size
         # Add an vGRU layer
         self.gru = nn.GRU(input_size, hidden_size)
 
@@ -39,10 +48,9 @@ class vGRU(nn.Module):
         self.hidden = torch.zeros(1, 1, hidden_size)
 
     def forward(self, seq):
-        gru_out, self.hidden = self.gru(seq.view(len(seq), 1, -1), self.hidden)
-        pred = self.linear(gru_out.view(len(seq),-1))
+        gru_out, self.hidden = self.gru(seq.reshape(-1, 1, len(seq)), self.hidden)
+        pred = self.linear(gru_out.reshape(1,-1))
         return pred[-1]   # we only care about the last prediction
-
 
 model = vGRU()
 print(model)
@@ -57,7 +65,26 @@ def count_parameters(model):
 
 count_parameters(model)
 
+epochs = 100
 
+for i in range(epochs):
+
+    # tuple-unpack the train_data set
+    for seq, y_train in train_data:
+
+        # reset the parameters and hidden states
+        seq = seq.float()
+        optimizer.zero_grad()
+        model.hidden = (torch.zeros(1,1,model.hidden_size))
+
+        y_pred = model(seq)
+
+        loss = criterion(y_pred.float(), y_train.float())
+        loss.backward()
+        optimizer.step()
+
+    # print training result
+    print(f'Epoch: {i+1:2} Loss: {loss.item():10.8f}')
 
 # if __name__ == '__main__':
 
