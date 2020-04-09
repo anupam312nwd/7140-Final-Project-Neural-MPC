@@ -29,7 +29,7 @@ data_states = np.load('data/trial1_states.npy')
 data_actions = np.load('data/trial1_actions.npy')
 data_next_states = np.load('data/trial1_next_states.npy')
 
-input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis = 1))
+input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis=1))
 output_data = torch.from_numpy(data_next_states)
 
 N = input_data.shape[0]
@@ -46,9 +46,10 @@ test_data = data[int(2*N/3):]
 
 print(len(train_data), len(test_data))
 
+
 class vGRU(nn.Module):
 
-    def __init__(self, input_size= 7, hidden_size= 30, out_size= 6):
+    def __init__(self, input_size=7, hidden_size=30, out_size=6):
 
         super().__init__()
 
@@ -57,14 +58,14 @@ class vGRU(nn.Module):
         self.gru = nn.GRU(input_size, hidden_size)
 
         # Add a fully-connected layer
-        self.linear = nn.Linear(hidden_size,out_size)
+        self.linear = nn.Linear(hidden_size, out_size)
 
         # Initialize h0
         self.hidden = torch.zeros(1, 1, hidden_size)
 
     def forward(self, seq):
         gru_out, self.hidden = self.gru(seq.reshape(-1, 1, len(seq)), self.hidden)
-        pred = self.linear(gru_out.reshape(1,-1))
+        pred = self.linear(gru_out.reshape(1, -1))
         return pred[-1]   # we only care about the last prediction
 
 
@@ -73,11 +74,13 @@ print(model)
 criterion = nn.MSELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
 
+
 def count_parameters(model):
     params = [p.numel() for p in model.parameters() if p.requires_grad]
     for item in params:
         print(f'{item:>6}')
     print(f'______\n{sum(params):>6}')
+
 
 count_parameters(model)
 
@@ -95,7 +98,7 @@ for i in range(epochs):
         # reset the parameters and hidden states
         seq = seq.float()
         optimizer.zero_grad()
-        model.hidden = (torch.zeros(1,1,model.hidden_size))
+        model.hidden = (torch.zeros(1, 1, model.hidden_size))
 
         y_pred = model(seq)
 
@@ -113,7 +116,7 @@ for i in range(epochs):
         for seq, y_test in test_data:
 
             seq = seq.float()
-            model.hidden = (torch.zeros(1,1,model.hidden_size))
+            model.hidden = (torch.zeros(1, 1, model.hidden_size))
 
             y_pred = model(seq)
 
@@ -124,8 +127,10 @@ for i in range(epochs):
         # print testing result
         print(f'Epoch: {i+1:2} Testing Loss: {loss.item():10.8f}')
 
-plt.plot(train_loss)
-plt.plot(test_loss)
+plt.plot(train_loss, label="train_loss")
+plt.plot(test_loss, label="test_loss")
+plt.legend()
+plt.savefig("Train_test_loss.png")
 plt.show()
 
 torch.save(model.state_dict(), 'node_agent/sample_torchgru.pt')

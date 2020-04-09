@@ -60,7 +60,7 @@ model.eval()
 from utils.gym_utils import generate_training_data
 
 env = gym.make("Acrobot-v1")
-states, actions, next_states = generate_training_data(env, 90)
+states, actions, next_states = generate_training_data(env, 100)
 
 print(states, actions, next_states)
 input_data = torch.from_numpy(np.concatenate((states, actions), axis = 1))
@@ -102,11 +102,11 @@ print(type(y_model))
 print(y_env.shape)
 print(y_env[:,1])
 
-plt.plot(y_env[:,0], 'b', marker= "o", label= "true")
-plt.plot(y_model[:,0], 'bx', label= "rnn")
+plt.plot(y_env[:,0], 'b', marker= "o", label= "True")
+plt.plot(y_model[:,0], 'bx', label= "RNN")
 
-plt.plot(y_env[:,1], 'g', marker= "o", label= "true")
-plt.plot(y_model[:,1], 'gx', label= "rnn")
+plt.plot(y_env[:,1], 'g', marker= "o", label= "True")
+plt.plot(y_model[:,1], 'gx', label= "RNN")
 
 # plt.plot(y_env[:,1])
 # plt.plot(y_model[:,1])
@@ -120,6 +120,10 @@ plt.plot(y_model[:,1], 'gx', label= "rnn")
 
 
 plt.legend()
+# plt.savefig('Environment_GRU_compare.png')
+plt.title("RNN Comparison of predicted and true trajectory over horizon of 50")
+plt.xlabel("Horizon")
+plt.ylabel("Position")
 plt.show()
 # if __name__ == '__main__':
 
