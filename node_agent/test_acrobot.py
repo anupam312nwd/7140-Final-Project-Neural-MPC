@@ -16,15 +16,16 @@ import matplotlib.pyplot as plt
 # from torchdiffeq import odeint_adjoint as odeint
 from torchdiffeq import odeint
 
-device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
-def get_batch():
-    s = torch.from_numpy(np.random.choice(np.arange(args.data_size - args.batch_time, dtype=np.int64), args.batch_size, replace=False))
-    batch_y0 = true_y[s]  # (M, D)
-    batch_t = t[:args.batch_time]  # (T)
-    batch_y = torch.stack([true_y[s + i] for i in range(args.batch_time)], dim=0)  # (T, M, D)
-    return batch_y0, batch_t, batch_y
+# def get_batch():
+#     s = torch.from_numpy(np.random.choice(np.arange(args.data_size - args.batch_time, dtype=np.int64), args.batch_size, replace=False))
+#     batch_y0 = true_y[s]  # (M, D)
+#     batch_t = t[:args.batch_time]  # (T)
+#     batch_y = torch.stack([true_y[s + i] for i in range(args.batch_time)], dim=0)  # (T, M, D)
+    # return batch_y0, batch_t, batch_y
 
+mse = torch.nn.MSELoss()
 
 def controller(actions):
     def discrete_controller(t):
@@ -86,7 +87,7 @@ def trainNODE(config, data):
         model.set_controller(controller(actions[smpl]))
         pred_y = odeint(model, states[smpl], torch.Tensor(range(horizon)))
 
-        loss = torch.mean(torch.abs(pred_y - next_states[smpl]))
+        loss = mse(next_states[smpl], pred_y)
         loss.backward()
         loss_iters[itr] = loss.item()
 
