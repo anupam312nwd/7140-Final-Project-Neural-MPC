@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 from utils.acrobot_env import AcrobotEnv
 from utils.gym_utils import generate_torch_training_data
 from utils.plot_utils import smooth
-from agents.node_train import TransitionModelNet, train, test
+# from agents.node_train import TransitionModelNet, train, test
+from agents.gru_train import vGRU, train, test
 
 import matplotlib.pyplot as plt
 
@@ -20,11 +23,11 @@ config = {
 }
 
 data = generate_torch_training_data(env, config["n_samples"], filename="data/")
-model = TransitionModelNet()
+model = vGRU()
 
 hist, model = train(
-    model.to(device), 
-    (data[0].to(device), data[1].to(device), data[2].to(device)), 
+    model.to(device),
+    (data[0].to(device), data[1].to(device), data[2].to(device)),
     config
 )
 
