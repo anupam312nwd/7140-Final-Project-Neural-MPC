@@ -15,15 +15,16 @@ device = 'cpu'
 
 env = AcrobotEnv()
 
+batch = 64
 config = {
-    "n_samples": 10000,
+    "n_samples": 100,         # 10000
     "horizon": 1,
-    "iters": 1000,
-    "batch_size": 64,
+    "iters": 10,              # 1000
+    "batch_size": batch,
 }
 
 data = generate_torch_training_data(env, config["n_samples"], filename="data/")
-model = vGRU()
+model = vGRU(batch_size=batch)
 
 hist, model = train(
     model.to(device),
