@@ -18,8 +18,10 @@ def predict_horizon(state, action_sequence):
 
     prediction[:, 0] = env.model(state, action_sequence[0])
     for i, action in enumerate(action_sequence[1:]):
-        prediction[:, i] = env.model(state, action)
-    
+        ns = env.model(state, action)
+        prediction[:, i] = ns
+        state = ns
+
     return prediction
 
 config = {
