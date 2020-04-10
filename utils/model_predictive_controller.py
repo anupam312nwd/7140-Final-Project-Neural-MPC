@@ -1,3 +1,5 @@
+from utils.plot_utils import generate_video
+
 import numpy as np
 import numpy.random as npr
 from tqdm import tqdm
@@ -93,7 +95,7 @@ class MPC:
         _, counts_elements = np.unique(action_seq, return_counts=True)
         self.action_dist = counts_elements / counts_elements.sum()
 
-def run_mpc(transition_model, cost_func, config, env):
+def run_mpc(transition_model, cost_func, config, env, video=False):
     max_iters = 100
     controller = MPC(transition_model, cost_func, config)
 
@@ -104,6 +106,10 @@ def run_mpc(transition_model, cost_func, config, env):
 
     states.append(state)
     costs.append(cost_func(state))
+   
+    imgs = []
+    if video:
+        imgs.append(env.render_state(state))
 
     iters = 0
     pbar = tqdm(total=max_iters)
@@ -124,5 +130,14 @@ def run_mpc(transition_model, cost_func, config, env):
         iters += 1
         pbar.update(1)
         pbar.set_description(f"Current cost: {costs[-1]}")
+
+        if video:
+            imgs.append(env.render_state(ns))
+    
+    if video:
+        print("Generating test video...")
+        generate_video(imgs, "plots/mpc_test_video.gif")
+        print("Done.")
+        env.close()
     
     return states, costs
