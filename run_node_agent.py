@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = 'cpu'
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model_path = "agents/models/node_model.pth"
 
 env = AcrobotEnv()
@@ -36,14 +35,15 @@ else:
         model_config
     )
 
+    plt.figure()
     plt.title("Loss history, smoothed over 100 step window")
     plt.plot(smooth(hist, 100))
     plt.savefig("plots/node_train.png")
 
-    test_loss = 0
-    with torch.no_grad():
-        test_loss = test(model, env)
-    print(f"Test loss: {test_loss}")
+test_loss = 0
+with torch.no_grad():
+    test_loss = test(model, env)
+print(f"Test loss: {test_loss}")
 
 # Run mpc with learned model
 mpc_config = {
@@ -56,6 +56,7 @@ mpc_config = {
 
 states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s), mpc_config, env)
 
+plt.figure()
 plt.title(f"Cost horizon, over {mpc_config['horizon']}")
 plt.plot(costs)
 plt.savefig("plots/node_mpc_cost.png")

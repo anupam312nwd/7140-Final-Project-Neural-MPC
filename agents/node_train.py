@@ -110,8 +110,8 @@ def test(model_nn, env):
 
     plt.figure()
     plt.title("State 0 over 10 steps, true vs nn model")
-    plt.plot(states_true[0, :], label="theta_true")
-    plt.plot(states_nn[0, :].detach(), label="theta_nn")
+    plt.plot(states_true[1, :], label="theta_true")
+    plt.plot(states_nn[1, :].detach(), label="theta_nn")
     plt.legend()
     plt.savefig("plots/nn_train_true_compare.png")
     
