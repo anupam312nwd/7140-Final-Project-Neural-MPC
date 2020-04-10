@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.random as npr
+from tqdm import tqdm
 
 class MPC:
     """MPC Class that takes a transition model + cost function to find the best action in  a given state"""
@@ -91,3 +92,37 @@ class MPC:
         """ Updates the running distribution of actions to sample"""
         _, counts_elements = np.unique(action_seq, return_counts=True)
         self.action_dist = counts_elements / counts_elements.sum()
+
+def run_mpc(transition_model, cost_func, config, env):
+    max_iters = 100
+    controller = MPC(transition_model, cost_func, config)
+
+    states, costs = [], []
+
+    env.reset()
+    state = env._get_state()
+
+    states.append(state)
+    costs.append(cost_func(state))
+
+    iters = 0
+    pbar = tqdm(total=max_iters)
+    while True:
+        action = controller.act(state)
+
+        env.step(action)
+        ns = env._get_state()
+
+        states.append(ns)
+        costs.append(cost_func(ns))
+
+        state = ns
+
+        if abs(costs[-1] - costs[-2]) < 0.01 or iters > max_iters:
+            break
+        
+        iters += 1
+        pbar.update(1)
+        pbar.set_description(f"Current cost: {costs[-1]}")
+    
+    return states, costs

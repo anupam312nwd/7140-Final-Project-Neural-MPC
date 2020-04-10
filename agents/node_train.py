@@ -29,6 +29,20 @@ class TransitionModelNet(nn.Module):
         
     def forward(self, t, y):
         return self.net(y)
+    
+    def predict_horizon(self, state, action_sequence):
+        horizon = len(action_sequence)
+        state = torch.Tensor(state)
+        states = torch.zeros((state.shape[0], horizon))
+        for i, a in enumerate(action_sequence):
+            s_augmented = torch.cat((state, torch.Tensor([a]).float()))
+            ns = odeint(self, s_augmented, torch.Tensor([0, 0.2]))[1, :4]
+
+            states[:, i] = ns
+            state = ns
+        
+        return states.detach().numpy()
+
 
 def get_batch(data, data_size, batch_size):
     s = torch.from_numpy(np.random.choice(data_size, batch_size, replace=False))
