@@ -56,12 +56,13 @@ def generate_torch_training_data(env, samples, horizon=1, filename=None):
 
     for s in range(samples):
         env.reset()
+        env.set_state(env.sample_state())
         state = env._get_state()
         for i in range(horizon):
             action =  env.action_space.sample()
             
             # Collect state and action
-            states[s] = torch.Tensor(env._get_state())
+            states[s] = torch.Tensor(state)
             actions[s, i] = torch.Tensor([action])
 
             next_state, _, done, _ = env.step(action)

@@ -29,6 +29,20 @@ class TransitionModelNet(nn.Module):
         
     def forward(self, t, y):
         return self.net(y)
+    
+    def predict_horizon(self, state, action_sequence):
+        horizon = len(action_sequence)
+        state = torch.Tensor(state)
+        states = torch.zeros((state.shape[0], horizon))
+        for i, a in enumerate(action_sequence):
+            s_augmented = torch.cat((state, torch.Tensor([a]).float()))
+            ns = odeint(self, s_augmented, torch.Tensor([0, 0.2]))[1, :4]
+
+            states[:, i] = ns
+            state = ns
+        
+        return states.detach().numpy()
+
 
 def get_batch(data, data_size, batch_size):
     s = torch.from_numpy(np.random.choice(data_size, batch_size, replace=False))
@@ -96,8 +110,8 @@ def test(model_nn, env):
 
     plt.figure()
     plt.title("State 0 over 10 steps, true vs nn model")
-    plt.plot(states_true[0, :], label="theta_true")
-    plt.plot(states_nn[0, :].detach(), label="theta_nn")
+    plt.plot(states_true[1, :], label="theta_true")
+    plt.plot(states_nn[1, :].detach(), label="theta_nn")
     plt.legend()
     plt.savefig("plots/nn_train_true_compare.png")
     
