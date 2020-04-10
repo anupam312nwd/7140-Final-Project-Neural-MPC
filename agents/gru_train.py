@@ -109,20 +109,24 @@ def test(model_nn, env):
     states_nn = torch.zeros((4, horizon))
 
     for i, a in enumerate(actions):
-        s_true_augmented = torch.cat((state_true, a.unsqueeze(0).float()))
-        s_nn_augmented = torch.cat((state_nn, a.unsqueeze(0).float()))
+        # print(state_nn, state_true, a)
+        s_true_augmented = torch.cat((state_true.float(), a.unsqueeze(0).float()))
+        s_nn_augmented = torch.cat((state_nn.float(), a.unsqueeze(0).float()))
 
         # ns_true = odeint(env.dynamics, s_true_augmented, torch.Tensor([0, env.dt]))[1, :4]
         # ns_nn = odeint(model_nn, s_nn_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        ns_true, _, _, _ = env.step(a)
+        ns_true = env._get_state()
+        ns_true = torch.from_numpy(ns_true)
         model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
-        ns_nn = model(s_nn_augmented.float())
+        # print('s_nn_augmented', s_nn_augmented.shape)  # torch.Size([5])
+        ns_nn = model(s_nn_augmented.view(1, 1, 5).float())
 
         states_true[:, i] = ns_true
         states_nn[:, i] = ns_nn
 
         state_true = ns_true
-        state_nn = ns_nn
+        state_nn = ns_nn[0]
+        # print('state_nn', state_nn)
 
     plt.figure()
     plt.title("State 0 over 10 steps, true vs nn model")
