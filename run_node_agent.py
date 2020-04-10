@@ -30,11 +30,11 @@ else:
     }
 
     data = generate_torch_training_data(env, model_config["n_samples"], filename="data/")
-    # hist, model = train(
-    #     model.to(device), 
-    #     (data[0].to(device), data[1].to(device), data[2].to(device)), 
-    #     model_config
-    # )
+    hist, model = train(
+        model.to(device), 
+        (data[0].to(device), data[1].to(device), data[2].to(device)), 
+        model_config
+    )
 
     plt.title("Loss history, smoothed over 100 step window")
     plt.plot(smooth(hist, 100))
