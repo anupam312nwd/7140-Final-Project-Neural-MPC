@@ -133,6 +133,6 @@ def test(model_nn, env):
     plt.plot(states_true[0, :], label="theta_true")
     plt.plot(states_nn[0, :].detach(), label="theta_nn")
     plt.legend()
-    plt.savefig("plots/nn_train_true_compare.png")
+    plt.savefig("plots/gru_train_true_compare.png")
 
     return (state_true - state_nn).pow(2) / state_true.shape[0]

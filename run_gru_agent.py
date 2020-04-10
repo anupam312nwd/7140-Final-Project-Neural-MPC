@@ -33,7 +33,7 @@ hist, model = train(
 )
 
 plt.plot(smooth(hist, 100))
-plt.savefig("plots/node_train.png")
+plt.savefig("plots/gru_train.png")
 
 test_loss = 0
 with torch.no_grad():
