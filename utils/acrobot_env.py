@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import sin, cos, pi
+import torch
 
 from gym import core, spaces
 from gym.utils import seeding
@@ -167,6 +168,9 @@ class AcrobotEnv(core.Env):
     def _terminal(self):
         s = self.state
         return bool(-cos(s[0]) - cos(s[1] + s[0]) > 1.)
+
+    def dynamics(self, t, s_augmented):
+        return torch.Tensor(self._dsdt(s_augmented, t))
 
     def _dsdt(self, s_augmented, t):
         m1 = self.LINK_MASS_1

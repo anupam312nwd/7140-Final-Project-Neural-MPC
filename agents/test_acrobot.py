@@ -138,10 +138,6 @@ def trainNODE(config, data):
 
     return model
 
-def smooth(y, box_pts):
-    box = np.ones(box_pts)/box_pts
-    y_smooth = np.convolve(y, box, mode='valid')
-    return y_smooth
 
 if __name__ == "__main__":
     N_SAMPLES = 5000
