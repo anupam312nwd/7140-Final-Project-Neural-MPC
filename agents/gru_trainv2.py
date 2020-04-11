@@ -65,11 +65,13 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
     print(f"Data dimensions: \n{states.shape}, \n{actions.shape}, \n{next_states.shape}")
 
     print("Training... ")
-    loss_history = np.zeros(iters)
+    loss_history_train = np.zeros(iters)
+    loss_history_test = np.zeros(iters)
     pbar = tqdm(range(iters))
     # model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
     hidden = model.hidden
     for it in pbar:
+        """training of architecture and calculation of train loss"""
         state_batch, action_batch, next_state_batch = get_batch(data, data_size, batch_size)
         augmented_state_batch = torch.cat([state_batch, action_batch], dim=1)
         augmented_state_batch = augmented_state_batch.view(1, augmented_state_batch.shape[0], augmented_state_batch.shape[1])
@@ -86,14 +88,30 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
             loss.backward()
             optimizer.step()
         # loss_history[it] = loss.item()
-        loss_history[it] = sum_loss.item()
+        loss_history_train[it] = sum_loss.item()
         # loss = mse(next_state_batch.squeeze(1), pred_state[1, :, :4])
 
-        pbar.set_description(f"Current loss: {loss.item()}")
+        pbar.set_description(f"Current loss: {sum_loss.item()}")
+
+        """calculation of test loss"""
+        state_batch1, action_batch1, next_state_batch1 = get_batch(data, data_size, batch_size)
+        augmented_state_batch1 = torch.cat([state_batch1, action_batch1], dim=1)
+        augmented_state_batch1 = augmented_state_batch1.view(1, augmented_state_batch1.shape[0], augmented_state_batch1.shape[1])
+        with torch.no_grad():
+            sum_loss = 0
+            for seq in augmented_state_batch1:
+                hidden = hidden.detach()
+                seq = seq.view(1, 64, 5)
+                pred_state, hidden = model(seq.float(), hidden)
+                loss = criterion(pred_state.float(), next_state_batch1.squeeze(1).float())
+                sum_loss += loss
+            loss_history_test[it] = sum_loss.item()
+
+
     print("Done!")
 
     torch.save(model.state_dict(), "agents/models/node_model.pth")
-    return loss_history, model
+    return loss_history_train, loss_history_test, model
 
 
 def test(model_nn, env):
