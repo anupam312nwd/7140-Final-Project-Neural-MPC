@@ -53,9 +53,10 @@ mpc_config = {
     "horizon": 10, 
     "iters": 2,
     "num_candidates": 4,
+    "max_iters": 100,
 }
 
-states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s), mpc_config, env)
+states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s[0]) + np.linalg.norm(s[1]), mpc_config, env)
 
 plt.figure()
 plt.title(f"Cost, mpc horizon: {mpc_config['horizon']}")
