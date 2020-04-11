@@ -118,7 +118,7 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
 
     print("Done!")
 
-    torch.save(model.state_dict(), "agents/models/node_model.pth")
+    torch.save(model.state_dict(), "agents/models/gru_model.pth")
     return loss_history_train, loss_history_test, model
 
 
@@ -128,40 +128,27 @@ def test(model_nn, env):
 
     env.reset()
 
-    state_true = torch.Tensor(env._get_state())  # [4]
     state_nn = torch.Tensor(env._get_state())
-
-    # model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
-
     states_true = torch.zeros((4, horizon))  # [4, 100]
     states_nn = torch.zeros((4, horizon))
 
     hidden = model.hidden
     for i, a in enumerate(actions):
-        # print(state_nn, state_true, a)
-        s_true_augmented = torch.cat((state_true.float(), a.unsqueeze(0).float()))
+        # Step learned model 
         s_nn_augmented = torch.cat((state_nn.float(), a.unsqueeze(0).float()))
-
-        # ns_true = odeint(env.dynamics, s_true_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        # ns_nn = odeint(model_nn, s_nn_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        # ns_true, _, _, _ = env.step(a)
-
-        if i == 0:
-            ns_true = env.model(env._get_state(), a)
-        else:
-            ns_true = env.model(ns_true, a)
-        ns_true = torch.from_numpy(ns_true)
-        # print('s_nn_augmented', s_nn_augmented.shape)  # torch.Size([5])
         ns_nn, hidden = model(s_nn_augmented.view(1, 1, 5).float(), hidden)
 
-        # print('ns_nn, ns_true, states_true[:,i], states_nn[:,i] shapes -------')
-        # print(ns_nn.shape, ns_true.shape, states_true[:,i].shape, states_nn[:,i].shape)
+        # Step true model
+        env.step(a)
+        ns_true = env._get_state()
+        ns_true = torch.from_numpy(ns_true)
+
+        # Save state to feed into model
+        state_nn = ns_nn[0]
+
         states_true[:, i] = ns_true
         states_nn[:, i] = ns_nn
 
-        state_true = ns_true
-        state_nn = ns_nn[0]
-        # print('state_nn', state_nn)
 
     plt.figure()
     plt.title("State 0 over 10 steps, true vs nn model")
@@ -170,4 +157,4 @@ def test(model_nn, env):
     plt.legend()
     plt.savefig("plots/gru_train_true_compare.png")
 
-    return (state_true - state_nn).pow(2) / state_true.shape[0]
+    return np.linalg.norm(ns_true - ns_nn)
