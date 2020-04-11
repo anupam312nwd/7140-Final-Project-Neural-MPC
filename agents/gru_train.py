@@ -31,19 +31,19 @@ class vGRU(nn.Module):
         # Initialize h0
         self.hidden = torch.zeros(1, batch_size, hidden_size)
 
-    def forward(self, seq):
+    def forward(self, seq, hidden):
         # print('sequence info:', type(seq), len(seq))
-        gru_out, self.hidden = self.gru(seq.reshape(len(seq), self.batch_size,
-                                                    self.input_size), self.hidden)
+        gru_out, hidden = self.gru(seq.reshape(len(seq), self.batch_size,
+                                                    self.input_size), hidden)
         pred = self.linear(gru_out)  # .reshape(1, -1)
-        return pred[-1]   # we only care about the last prediction
+        return pred[-1], hidden   # we only care about the last prediction
 
 
 model = vGRU()
 print(model)
 print('---------------------------------')
 criterion = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
+# optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
 
 
 def get_batch(data, data_size, batch_size):
@@ -57,33 +57,31 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
     horizon = config["horizon"]
     batch_size = config["batch_size"]
     iters = config["iters"]
-    # optimizer = optim.RMSprop(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
     states, actions, next_states = data
     data_size = states.shape[0]
     print(f"Data dimensions: \n{states.shape}, \n{actions.shape}, \n{next_states.shape}")
-    # (100,4), (1,4), (100,1,4)
-
 
     print("Training... ")
     loss_history = np.zeros(iters)
     pbar = tqdm(range(iters))
+    # model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
+    hidden = model.hidden
     for it in pbar:
-        optimizer.zero_grad()
         state_batch, action_batch, next_state_batch = get_batch(data, data_size, batch_size)
         augmented_state_batch = torch.cat([state_batch, action_batch], dim=1)
         augmented_state_batch = augmented_state_batch.view(1, augmented_state_batch.shape[0], augmented_state_batch.shape[1])
-        # pred_state = odeint(model, augmented_state_batch, torch.Tensor([0, 0.2]))
-        # augmented_state_batch <-> train_data (in test_torchgru code)
-        # next_state_batch <-> test_data (in test_torchgru code)
-        # print(type(augmented_state_batch), augmented_state_batch.shape)
-        model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
+
+        optimizer.zero_grad()
+        # if it == 0: hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
         if it==1: print('augmented_state_batch', augmented_state_batch.shape)
-        pred_state = model(augmented_state_batch.float())
+        pred_state, hidden = model(augmented_state_batch.float(), hidden)
+        hidden = hidden.detach()
         # print('pred_state, next_state', pred_state.shape, next_state_batch.shape)
         loss = criterion(pred_state.float(), next_state_batch.float())
         # loss = mse(next_state_batch.squeeze(1), pred_state[1, :, :4])
-        # loss_history[it] = loss.item()
+        loss_history[it] = loss.item()
         loss.backward()
         optimizer.step()
 
@@ -103,7 +101,7 @@ def test(model_nn, env):
     state_true = torch.Tensor(env._get_state())
     state_nn = torch.Tensor(env._get_state())
 
-    # model.hidden = (torch.zeros(1, 1, model.hidden_size))
+    # model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
 
     states_true = torch.zeros((4, horizon))
     states_nn = torch.zeros((4, horizon))
