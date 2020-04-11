@@ -4,7 +4,7 @@ from utils.acrobot_env import AcrobotEnv
 from utils.gym_utils import generate_torch_training_data
 from utils.plot_utils import smooth
 # from agents.node_train import TransitionModelNet, train, test
-from agents.gru_train import vGRU, train, test
+from agents.gru_trainv2 import vGRU, train, test
 
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,7 @@ env = AcrobotEnv()
 
 batch = 64
 config = {
-    "n_samples": 20000,         # 10000
+    "n_samples": 2000,         # 10000
     "horizon": 1,
     "iters": 10000,              # 1000
     "batch_size": batch,
@@ -26,14 +26,16 @@ config = {
 data = generate_torch_training_data(env, config["n_samples"], filename="data/")
 model = vGRU(batch_size=batch)
 
-hist, model = train(
+hist_train, hist_test, model = train(
     model.to(device),
     (data[0].to(device), data[1].to(device), data[2].to(device)),
     config
 )
 
-plt.plot(smooth(hist, 100))
-plt.savefig("plots/gru_train.png")
+plt.plot(smooth(hist_train, 100), label='train')
+plt.plot(smooth(hist_test, 100), label='test')
+plt.legend()
+plt.savefig("plots/gru_train_test.png")
 
 test_loss = 0
 with torch.no_grad():
