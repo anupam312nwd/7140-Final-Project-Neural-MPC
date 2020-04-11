@@ -29,13 +29,14 @@ class vGRU(nn.Module):
         # Add a fully-connected layer
         self.linear = nn.Linear(hidden_size, out_size)
         # Initialize h0
-        self.hidden = torch.zeros(1, 1, hidden_size)
+        self.hidden = torch.zeros(1, batch_size, hidden_size)
 
     def forward(self, seq, hidden):
         # print('sequence info:', type(seq), len(seq))
-        gru_out, hidden = self.gru(seq.reshape(len(seq), self.batch_size,
+        gru_out, hidden = self.gru(seq.view(len(seq), self.batch_size,
                                                     self.input_size), hidden)
         pred = self.linear(gru_out)  # .reshape(1, -1)
+        # print(pred.shape)            # [1, 64, 4]
         return pred[-1], hidden   # we only care about the last prediction
 
 
@@ -74,12 +75,13 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
         augmented_state_batch = augmented_state_batch.view(1, augmented_state_batch.shape[0], augmented_state_batch.shape[1])
 
         optimizer.zero_grad()
-        if it==1: print('augmented_state_batch', augmented_state_batch.shape)
         sum_loss = 0
         for seq in augmented_state_batch:
-            pred_state, hidden = model(seq.float(), hidden)
             hidden = hidden.detach()
-            loss = criterion(pred_state.float(), next_state_batch.float())
+            seq = seq.view(1, 64, 5)
+            pred_state, hidden = model(seq.float(), hidden)
+            loss = criterion(pred_state.float(), next_state_batch.squeeze(1).float())
+            if it in {0, 1}: print(pred_state.shape, next_state_batch.shape)
             sum_loss += loss
             loss.backward()
             optimizer.step()
@@ -116,7 +118,7 @@ def test(model_nn, env):
 
         # ns_true = odeint(env.dynamics, s_true_augmented, torch.Tensor([0, env.dt]))[1, :4]
         # ns_nn = odeint(model_nn, s_nn_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        ns_true = env._get_state()
+        ns_true, _, _, _ = env.step(a)
         ns_true = torch.from_numpy(ns_true)
         # print('s_nn_augmented', s_nn_augmented.shape)  # torch.Size([5])
         ns_nn, hidden = model(s_nn_augmented.view(1, 1, 5).float(), hidden)
