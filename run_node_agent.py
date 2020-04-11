@@ -17,10 +17,11 @@ env = AcrobotEnv()
 model = TransitionModelNet()
 
 # Check if we already have a trained model
-
 if os.path.isfile(model_path):
+    print("Loading model file")
     model.load_state_dict(torch.load(model_path)) 
 else:
+    print("No model file, training new model")
     model_config = {
         "n_samples": 50000,
         "horizon": 1,
@@ -50,13 +51,13 @@ mpc_config = {
     "action_size": env.action_space.n,
     "state_size": 4,
     "horizon": 10, 
-    "iters": 10,
-    "num_candidates": 10,
+    "iters": 2,
+    "num_candidates": 4,
 }
 
 states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s), mpc_config, env)
 
 plt.figure()
-plt.title(f"Cost horizon, over {mpc_config['horizon']}")
+plt.title(f"Cost, mpc horizon: {mpc_config['horizon']}")
 plt.plot(costs)
 plt.savefig("plots/node_mpc_cost.png")

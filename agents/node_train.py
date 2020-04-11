@@ -1,3 +1,5 @@
+from utils.plot_utils import generate_video
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -58,7 +60,6 @@ def train(model, data, config={"horizon": 10, "iters": 1000, "batch_size": 32}):
     data_size = states.shape[0]
     print(f"Data dimensions: \n{states.shape}, \n{actions.shape}, \n{next_states.shape}")
 
-
     print("Training... ")
     loss_history = np.zeros(iters)
     pbar = tqdm(range(iters))
@@ -76,12 +77,14 @@ def train(model, data, config={"horizon": 10, "iters": 1000, "batch_size": 32}):
         optimizer.step()
 
         pbar.set_description(f"Current loss: {loss.item()}")
-    print("Done!")
+    print("Done.")
 
     torch.save(model.state_dict(), "agents/models/node_model.pth")
+
+        
     return loss_history, model
 
-def test(model_nn, env):
+def test(model_nn, env, video=False):
     horizon = 100
     actions = torch.randint(0, env.action_space.n, (horizon,))
 
@@ -90,9 +93,12 @@ def test(model_nn, env):
     state_true = torch.Tensor(env._get_state())
     state_nn = torch.Tensor(env._get_state())
 
-
     states_true = torch.zeros((4, horizon))
     states_nn = torch.zeros((4, horizon))
+
+    imgs = []
+    if video:
+        imgs.append(env.render_state(state_nn.detach().numpy()))
 
     for i, a in enumerate(actions):
         s_true_augmented = torch.cat((state_true, a.unsqueeze(0).float()))
@@ -101,6 +107,8 @@ def test(model_nn, env):
         ns_true = odeint(env.dynamics, s_true_augmented, torch.Tensor([0, env.dt]))[1, :4]
         ns_nn = odeint(model_nn, s_nn_augmented, torch.Tensor([0, env.dt]))[1, :4]
 
+        if video:
+            imgs.append(env.render_state(ns_true.detach().numpy()))
 
         states_true[:, i] = ns_true
         states_nn[:, i] = ns_nn
@@ -114,6 +122,11 @@ def test(model_nn, env):
     plt.plot(states_nn[1, :].detach(), label="theta_nn")
     plt.legend()
     plt.savefig("plots/nn_train_true_compare.png")
+
+    if video:
+        print("Generating test video...")
+        generate_video(imgs, "plots/node_test_video.gif")
+        print("Done.")
+        env.close()
     
     return (state_true - state_nn).pow(2) / state_true.shape[0]
-

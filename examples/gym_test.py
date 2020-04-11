@@ -14,7 +14,7 @@ observation = env.reset()
 # agent = NeuralMPC(config) / NeuralRNN(config) # running the agent
 # net = RNN(state_shape) # running the network
 for _ in range(5):
-  # action = env.action_space.sample() # your agent here (this takes random actions)
+  action = env.action_space.sample() # your agent here (this takes random actions)
   # prediction = net(observation, action) # network takes in the current image, predicts next one 
   # action = agent.act(observation) # your agent here (this takes random actions)
 

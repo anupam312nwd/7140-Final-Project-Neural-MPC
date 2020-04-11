@@ -1,3 +1,5 @@
+from utils.plot_utils import generate_video
+
 import numpy as np
 import numpy.random as npr
 from tqdm import tqdm
@@ -25,6 +27,7 @@ class MPC:
 
         self.action_dist = np.ones(self.action_size) * (1 / self.action_size)
         self.best_action_seq = np.zeros(self.horizon)
+        self.best_action_seq_cost = np.Infinity
     
     def act(self, state):
         """ Returns best action under given state
@@ -40,18 +43,21 @@ class MPC:
             if i == 0:
                 actions = self.sample_actions()
             else:
-                actions = self.sample_actions(use_action_dist=True)
+                actions = self.sample_actions(use_action_dist=False)
             
             # actions should already be valid
 
             predictions = self.predict(state, actions)
             costs = np.array([self.cost(pred) for pred in predictions])
 
-            best_seq = actions[np.argmax(costs)]
+            best_seq_indx = np.argmin(costs)
+
+            best_seq = actions[best_seq_indx]
             self.update_action_dist(best_seq)
 
-            if np.argmax(costs) > self.cost(self.model(state, self.best_action_seq)):
+            if costs[best_seq_indx] < self.best_action_seq_cost:
                 self.best_action_seq = best_seq
+                self.best_action_seq_cost = costs[best_seq_indx]
         
         return self.best_action_seq[0]
 
@@ -90,20 +96,32 @@ class MPC:
 
     def update_action_dist(self, action_seq):
         """ Updates the running distribution of actions to sample"""
-        _, counts_elements = np.unique(action_seq, return_counts=True)
-        self.action_dist = counts_elements / counts_elements.sum()
+        unique, counts_elements = np.unique(action_seq, return_counts=True)
 
-def run_mpc(transition_model, cost_func, config, env):
-    max_iters = 100
+        new_action_dist = counts_elements
+        if len(unique) < self.action_size:
+            new_action_dist = np.zeros(self.action_size)
+            for i, u in enumerate(unique):
+                new_action_dist[u] += counts_elements[i]
+        self.action_dist = new_action_dist / counts_elements.sum()
+
+def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=False):
+    max_iters = 10
     controller = MPC(transition_model, cost_func, config)
 
     states, costs = [], []
 
     env.reset()
+    if seed_state:
+        env.set_state(seed_state)
     state = env._get_state()
 
     states.append(state)
     costs.append(cost_func(state))
+   
+    imgs = []
+    if video:
+        imgs.append(env.render_state(state))
 
     iters = 0
     pbar = tqdm(total=max_iters)
@@ -124,5 +142,14 @@ def run_mpc(transition_model, cost_func, config, env):
         iters += 1
         pbar.update(1)
         pbar.set_description(f"Current cost: {costs[-1]}")
+
+        if video:
+            imgs.append(env.render_state(ns))
+    
+    if video:
+        print("Generating test video...")
+        generate_video(imgs, "plots/mpc_test_video.gif")
+        print("Done.")
+        env.close()
     
     return states, costs
