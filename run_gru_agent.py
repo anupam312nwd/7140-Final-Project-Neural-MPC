@@ -17,9 +17,9 @@ env = AcrobotEnv()
 
 batch = 64
 config = {
-    "n_samples": 10000,         # 10000
+    "n_samples": 20000,         # 10000
     "horizon": 1,
-    "iters": 1000,              # 1000
+    "iters": 10000,              # 1000
     "batch_size": batch,
 }
 
