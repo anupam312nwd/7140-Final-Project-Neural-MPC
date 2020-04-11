@@ -61,7 +61,14 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
     states, actions, next_states = data
-    data_size = states.shape[0]
+    n_samples = states.shape[0]
+    data_size = int(n_samples/2)
+    data_train = states[0:data_size,:], actions[0:data_size,:], next_states[0:data_size,:]
+    data_test = states[data_size:,:], actions[data_size:,:], next_states[data_size:,:]
+
+    print('data shape')
+    # print(type(data), type(states), type(actions), type(next_states))
+    # print(len(data), states.shape, actions.shape, next_states.shape)
     print(f"Data dimensions: \n{states.shape}, \n{actions.shape}, \n{next_states.shape}")
 
     print("Training... ")
@@ -72,7 +79,7 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
     hidden = model.hidden
     for it in pbar:
         """training of architecture and calculation of train loss"""
-        state_batch, action_batch, next_state_batch = get_batch(data, data_size, batch_size)
+        state_batch, action_batch, next_state_batch = get_batch(data_train, data_size, batch_size)
         augmented_state_batch = torch.cat([state_batch, action_batch], dim=1)
         augmented_state_batch = augmented_state_batch.view(1, augmented_state_batch.shape[0], augmented_state_batch.shape[1])
 
@@ -94,13 +101,14 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
         pbar.set_description(f"Current loss: {sum_loss.item()}")
 
         """calculation of test loss"""
-        state_batch1, action_batch1, next_state_batch1 = get_batch(data, data_size, batch_size)
+        state_batch1, action_batch1, next_state_batch1 = get_batch(data_test, data_size, batch_size)
         augmented_state_batch1 = torch.cat([state_batch1, action_batch1], dim=1)
         augmented_state_batch1 = augmented_state_batch1.view(1, augmented_state_batch1.shape[0], augmented_state_batch1.shape[1])
         with torch.no_grad():
             sum_loss = 0
             for seq in augmented_state_batch1:
                 hidden = hidden.detach()
+                hidden = model.hidden  # to check test_output again
                 seq = seq.view(1, 64, 5)
                 pred_state, hidden = model(seq.float(), hidden)
                 loss = criterion(pred_state.float(), next_state_batch1.squeeze(1).float())
