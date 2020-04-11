@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import sin, cos, pi
 import torch
+import scipy.integrate
 
 from gym import core, spaces
 from gym.utils import seeding

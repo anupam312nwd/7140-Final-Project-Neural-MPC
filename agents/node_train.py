@@ -1,4 +1,5 @@
 from utils.plot_utils import generate_video
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -129,4 +130,3 @@ def test(model_nn, env, video=False):
         env.close()
     
     return (state_true - state_nn).pow(2) / state_true.shape[0]
-

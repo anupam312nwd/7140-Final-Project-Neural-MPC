@@ -43,7 +43,7 @@ else:
 
 test_loss = 0
 with torch.no_grad():
-    test_loss = test(model, env, video=True)
+    test_loss = test(model, env)
 print(f"Test loss: {test_loss}")
 
 # Run mpc with learned model
@@ -51,11 +51,11 @@ mpc_config = {
     "action_size": env.action_space.n,
     "state_size": 4,
     "horizon": 10, 
-    "iters": 10,
-    "num_candidates": 10,
+    "iters": 2,
+    "num_candidates": 4,
 }
 
-states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s), mpc_config, env, video=True)
+states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s), mpc_config, env)
 
 plt.figure()
 plt.title(f"Cost, mpc horizon: {mpc_config['horizon']}")
