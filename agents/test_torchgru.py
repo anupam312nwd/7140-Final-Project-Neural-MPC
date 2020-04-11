@@ -1,67 +1,49 @@
+"""GRU implementation for predicting state"""
 
 import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 # %matplotlib inline
 
-# parser = argparse.ArgumentParser('vGRU demo')
-# parser.add_argument('--method', type=str, choices=['dopri5', 'adams'], default='dopri5')
-# parser.add_argument('--data_size', type=int, default=1000)
-# parser.add_argument('--batch_time', type=int, default=10)
-# parser.add_argument('--batch_size', type=int, default=20)
-# parser.add_argument('--niters', type=int, default=2000)
-# parser.add_argument('--test_freq', type=int, default=20)
-# parser.add_argument('--viz', action='store_true')
-# parser.add_argument('--gpu', type=int, default=0)
-# args = parser.parse_args()
+parser = argparse.ArgumentParser('vGRU demo')
+parser.add_argument('--epochs', type=int, default=20)
+parser.add_argument('--gpu', type=int, default=0)
+args = parser.parse_args()
 
-# device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
-
-# import sys
-# import os.path as path
-
-# sys.path.insert(1, path.abspath(path.join(__file__ , "../")))
-# filename = "data"
-# print(filename)
+device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
 data_states = np.load('data/trial1_states.npy')
 data_actions = np.load('data/trial1_actions.npy')
 data_next_states = np.load('data/trial1_next_states.npy')
-
 input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis=1))
 output_data = torch.from_numpy(data_next_states)
 
 N = input_data.shape[0]
 print(N)
-
 data = []
 for i in range(N):
     data.append((input_data[i], output_data[i]))
-
 print(len(data))
 
-train_data = data[:int(2*N/3)]
-test_data = data[int(2*N/3):]
-
-print(len(train_data), len(test_data))
+train_data = data[:int(2/3 * N)]
+test_data = data[int(2/3 * N):]
+# print(len(train_data), len(test_data))
 
 
 class vGRU(nn.Module):
 
     def __init__(self, input_size=7, hidden_size=30, out_size=6):
-
         super().__init__()
-
         self.hidden_size = hidden_size
         # Add an vGRU layer
         self.gru = nn.GRU(input_size, hidden_size)
-
         # Add a fully-connected layer
         self.linear = nn.Linear(hidden_size, out_size)
-
         # Initialize h0
-        self.hidden = torch.zeros(1, 1, hidden_size)
+        # self.hidden = torch.zeros(1, 1, hidden_size)
+        self.hidden = (torch.zeros(1, 1, hidden_size))
 
     def forward(self, seq):
         gru_out, self.hidden = self.gru(seq.reshape(-1, 1, len(seq)), self.hidden)
@@ -71,6 +53,7 @@ class vGRU(nn.Module):
 
 model = vGRU()
 print(model)
+print('---------------------------------')
 criterion = nn.MSELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
 
@@ -117,9 +100,7 @@ for i in range(epochs):
 
             seq = seq.float()
             model.hidden = (torch.zeros(1, 1, model.hidden_size))
-
             y_pred = model(seq)
-
             loss = criterion(y_pred.float(), y_test.float())
             sum_loss += loss
 
