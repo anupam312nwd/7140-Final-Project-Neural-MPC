@@ -24,8 +24,9 @@ class MPC:
         self.horizon = config["horizon"]
         self.iters = config["iters"]
         self.num_candidates = config["num_candidates"]
+        self.best_k = self.num_candidates // 2
 
-        self.action_dist = np.ones(self.action_size) * (1 / self.action_size)
+        self.action_dist = np.ones((self.action_size, self.horizon)) * (1 / self.action_size)
         self.best_action_seq = np.zeros(self.horizon)
         self.best_action_seq_cost = np.Infinity
     
@@ -50,11 +51,13 @@ class MPC:
             predictions = self.predict(state, actions)
             costs = np.array([self.cost(pred) for pred in predictions])
 
-            best_seq_indx = np.argmin(costs)
+            sorted_costs_indx = np.argsort(costs) # low to high
+            best_seq_indx = sorted_costs_indx[0]
+
+            update_seq = actions[sorted_costs_indx[:self.best_k]]
+            self.update_action_dist(update_seq)
 
             best_seq = actions[best_seq_indx]
-            self.update_action_dist(best_seq)
-
             if costs[best_seq_indx] < self.best_action_seq_cost:
                 self.best_action_seq = best_seq
                 self.best_action_seq_cost = costs[best_seq_indx]
@@ -88,25 +91,30 @@ class MPC:
         Return:
             action_sequence: (num_candidates, horizon) shaped array with multiple sequences of actions
         """
+        actions = np.zeros((self.num_candidates, self.horizon)) 
+        for i in range(self.horizon):
+            if use_action_dist:
+                actions[:, i] = npr.choice(self.action_size, p=self.action_dist[:, i], size=self.num_candidates)
+            else:
+                actions[:, i] = npr.choice(self.action_size, size=self.num_candidates)
         
-        if use_action_dist:
-            return npr.choice(len(self.action_dist), p=self.action_dist, size=(self.num_candidates, self.horizon))
-        else:
-            return npr.choice(self.action_size, size=(self.num_candidates, self.horizon))
+        return actions
 
     def update_action_dist(self, action_seq):
         """ Updates the running distribution of actions to sample"""
-        unique, counts_elements = np.unique(action_seq, return_counts=True)
 
-        new_action_dist = counts_elements
-        if len(unique) < self.action_size:
-            new_action_dist = np.zeros(self.action_size)
-            for i, u in enumerate(unique):
-                new_action_dist[u] += counts_elements[i]
-        self.action_dist = new_action_dist / counts_elements.sum()
+        for h in range(self.horizon):
+            unique, counts_elements = np.unique(action_seq[:, h], return_counts=True)
+
+            new_action_dist = counts_elements
+            if len(unique) < self.action_size:
+                new_action_dist = np.zeros(self.action_size)
+                for i, u in enumerate(unique):
+                    new_action_dist[int(u)] += counts_elements[i]
+            self.action_dist[:, h] = new_action_dist / counts_elements.sum()
 
 def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=False):
-    max_iters = 10
+    max_iters = config["max_iters"]
     controller = MPC(transition_model, cost_func, config)
 
     states, costs = [], []
@@ -114,6 +122,9 @@ def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=Fal
     env.reset()
     if seed_state:
         env.set_state(seed_state)
+    else:
+        env.set_state(env.sample_state())
+
     state = env._get_state()
 
     states.append(state)
@@ -136,7 +147,7 @@ def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=Fal
 
         state = ns
 
-        if abs(costs[-1] - costs[-2]) < 0.01 or iters > max_iters:
+        if costs[-1] < 0.01 or iters > max_iters:
             break
         
         iters += 1
@@ -145,6 +156,7 @@ def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=Fal
 
         if video:
             imgs.append(env.render_state(ns))
+    
     
     if video:
         print("Generating test video...")

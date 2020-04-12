@@ -10,7 +10,7 @@ env = AcrobotEnv()
 
 def cost_up(states):
     """ Cost function to get acrobot upright"""
-    return np.sum(((-np.cos(states[0, :]) - np.cos(states[1, :] + states[0, :])) - 1) ** 2)
+    return np.sum(abs(-np.cos(states[0]) - np.cos(states[1]) + states[0]) - 1)
 
 def cost_down(states):
     """ Cost function to get acrobot straight down"""
@@ -24,27 +24,22 @@ def predict_horizon(state, action_sequence):
     prediction[:, 0] = env.model(state, action_sequence[0])
     for i, action in enumerate(action_sequence[1:]):
         ns = env.model(state, action)
-<<<<<<< HEAD
         prediction[:, i + 1] = env.model(state, action)
 
         state = ns
     
-=======
-        prediction[:, i] = ns
-        state = ns
-
->>>>>>> 3daa744d62d6090bd63d93e302e1cb26bf7ab432
     return prediction
 
 config = {
     "action_size": env.action_space.n,
     "state_size": 4,
-    "horizon": 1,
-    "iters": 10,
+    "horizon": 500,
+    "iters": 5,
+    "max_iters": 500,
     "num_candidates": 10
 }
 
-states, costs = run_mpc(predict_horizon, cost_down, config, env, seed_state=[0, 0, 0, 0])
+states, costs = run_mpc(predict_horizon, cost_up, config, env, video=True, seed_state=[0, 0, 0, 0])
 
 plt.plot(costs)
 plt.title("Test mpc go to origin")
