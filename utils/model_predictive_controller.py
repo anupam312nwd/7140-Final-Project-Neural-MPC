@@ -138,6 +138,7 @@ def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=Fal
     pbar = tqdm(total=max_iters)
     while True:
         action = controller.act(state)
+        # action = env.action_space.sample()
 
         env.step(action)
         ns = env._get_state()
@@ -147,7 +148,8 @@ def run_mpc(transition_model, cost_func, config, env, seed_state=None, video=Fal
 
         state = ns
 
-        if costs[-1] < 0.01 or iters > max_iters:
+        # if costs[-1] < 0.01 or iters > max_iters:
+        if iters > max_iters:
             break
         
         iters += 1

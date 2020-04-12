@@ -35,11 +35,11 @@ config = {
     "state_size": 4,
     "horizon": 500,
     "iters": 5,
-    "max_iters": 500,
+    "max_iters": 100,
     "num_candidates": 10
 }
 
-states, costs = run_mpc(predict_horizon, cost_up, config, env, video=True, seed_state=[0, 0, 0, 0])
+states, costs = run_mpc(predict_horizon, cost_up, config, env, video=True, seed_state=[1, 0, 0, 0])
 
 plt.plot(costs)
 plt.title("Test mpc go to origin")

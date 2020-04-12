@@ -57,26 +57,40 @@ def train(model, data, config={"horizon": 10, "iters": 1000, "batch_size": 32}):
     optimizer = optim.RMSprop(model.parameters(), lr=1e-3)
 
     states, actions, next_states = data
-    data_size = states.shape[0]
-    print(f"Data dimensions: \n{states.shape}, \n{actions.shape}, \n{next_states.shape}")
+    n_samples = states.shape[0]
+    data_size = int(n_samples/2)
+    data_train = states[0:data_size,:], actions[0:data_size,:], next_states[0:data_size,:]
+    data_test = states[data_size:,:], actions[data_size:,:], next_states[data_size:,:]
 
     print("Training... ")
-    loss_history = np.zeros(iters)
+    loss_history = np.zeros((iters, 2))
     pbar = tqdm(range(iters))
     for it in pbar:
         optimizer.zero_grad()
-        state_batch, action_batch, next_state_batch = get_batch(data, data_size, batch_size)
+        state_batch, action_batch, next_state_batch = get_batch(data_train, data_size, batch_size)
         augmented_state_batch = torch.cat([state_batch, action_batch], dim=1)
 
         pred_state = odeint(model, augmented_state_batch, torch.Tensor([0, 0.2]))
 
         loss = mse(next_state_batch.squeeze(1), pred_state[1, :, :4])
-        loss_history[it] = loss.item()
+        loss_history[it, 0] = loss.item()
 
         loss.backward()
         optimizer.step()
 
-        pbar.set_description(f"Current loss: {loss.item()}")
+
+        with torch.no_grad():
+            state_batch, action_batch, next_state_batch = get_batch(data_test, data_size, batch_size)
+            augmented_state_batch = torch.cat([state_batch, action_batch], dim=1)
+            pred_state = odeint(model, augmented_state_batch, torch.Tensor([0, 0.2]))
+
+            loss = mse(next_state_batch.squeeze(1), pred_state[1, :, :4])
+            loss_history[it, 1] = loss.item()
+
+        if it % 50 == 0:
+            pbar.set_description(f"train loss: {loss_history[it, 0]}, test loss: {loss_history[it, 1]}")
+
+
     print("Done.")
 
     torch.save(model.state_dict(), "agents/models/node_model.pth")
@@ -116,12 +130,30 @@ def test(model_nn, env, video=False):
         state_true = ns_true
         state_nn = ns_nn
 
-    plt.figure()
-    plt.title("State 0 over 10 steps, true vs nn model")
-    plt.plot(states_true[1, :], label="theta_true")
-    plt.plot(states_nn[1, :].detach(), label="theta_nn")
-    plt.legend()
-    plt.savefig("plots/nn_train_true_compare.png")
+    fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(2, 2)
+    fig.suptitle(f"NODE: Predictions over {horizon} steps")
+
+    ax0.plot(states_true[0, :], label="True")
+    ax0.plot(states_nn[0, :].detach(), label="Predicted")
+    ax0.set_title(r'$\theta_0$')
+
+    ax1.plot(states_true[1, :], label="True")
+    ax1.plot(states_nn[1, :].detach(), label="Predicted")
+    ax1.legend(loc="lower right")
+    ax1.set_title(r'$\theta_1$')
+
+    ax2.plot(states_true[2, :], label="True")
+    ax2.plot(states_nn[2, :].detach(), label="Predicted")
+    ax2.set_title(r'$\dot{\theta}_0$')
+
+    a = ax3.plot(states_true[0, :], label="True")
+    b = ax3.plot(states_nn[0, :].detach(), label="Predicted")
+    ax3.set_title(r'$\dot{\theta}_1$')
+
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.88)
+
+    plt.savefig("plots/node_train_true_compare.png")
 
     if video:
         print("Generating test video...")
