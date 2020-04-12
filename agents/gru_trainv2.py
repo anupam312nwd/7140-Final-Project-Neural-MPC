@@ -39,6 +39,20 @@ class vGRU(nn.Module):
         # print(pred.shape)            # [1, 64, 4]
         return pred[-1], hidden   # we only care about the last prediction
 
+    def predict_horizon(self, state, action_sequence):
+        horizon = len(action_sequence)
+        state = torch.Tensor(state)
+        states = torch.zeros((state.shape[0], horizon))
+        hidden = torch.zeros(1, 1, self.hidden_size)
+        for i, a in enumerate(action_sequence):
+            s_augmented = torch.cat((state, torch.Tensor([a]).float()))
+            # ns = odeint(self, s_augmented, torch.Tensor([0, 0.2]))[1, :4]
+            ns, hidden = model(s_augmented.view(1, 1, 5).float(), hidden)
+
+            states[:, i] = ns
+            state = ns[0]
+
+        return states.detach().numpy()
 
 model = vGRU()
 print(model)
@@ -90,7 +104,7 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
             seq = seq.view(1, 64, 5)
             pred_state, hidden = model(seq.float(), hidden)
             loss = criterion(pred_state.float(), next_state_batch.squeeze(1).float())
-            if it in {0, 1}: print(pred_state.shape, next_state_batch.shape)
+            # if it in {0, 1}: print(pred_state.shape, next_state_batch.shape)
             sum_loss += loss
             loss.backward()
             optimizer.step()
