@@ -1,4 +1,5 @@
 """GRU training model update"""
+from utils.plot_utils import generate_video
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -136,7 +137,7 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
     return loss_history_train, loss_history_test, model
 
 
-def test(model_nn, env):
+def test(model_nn, env, video=False):
     horizon = 100
     actions = torch.randint(0, env.action_space.n, (horizon,))  # [100]
 
@@ -145,6 +146,10 @@ def test(model_nn, env):
     state_nn = torch.Tensor(env._get_state())
     states_true = torch.zeros((4, horizon))  # [4, 100]
     states_nn = torch.zeros((4, horizon))
+
+    imgs = []
+    if video:
+        imgs.append(env.render_state(state_nn.detach().numpy()))
 
     hidden = model.hidden
     for i, a in enumerate(actions):
@@ -156,6 +161,9 @@ def test(model_nn, env):
         env.step(a)
         ns_true = env._get_state()
         ns_true = torch.from_numpy(ns_true)
+
+        if video:
+            imgs.append(env.render_state(ns_true.detach().numpy()))
 
         # Save state to feed into model
         state_nn = ns_nn[0]
@@ -171,4 +179,9 @@ def test(model_nn, env):
     plt.legend()
     plt.savefig("plots/gru_train_true_compare.png")
 
+    if video:
+        print("Generating test video...")
+        generate_video(imgs, "plots/gru_test_video.gif")
+        print("Done.")
+        env.close()
     return np.linalg.norm(ns_true - ns_nn)

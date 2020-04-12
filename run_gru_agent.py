@@ -48,7 +48,7 @@ else:
 
 test_loss = 0
 with torch.no_grad():
-    test_loss = test(model, env)
+    test_loss = test(model, env, video=True)
 
 print(f"Test loss: {test_loss}")
 
@@ -68,4 +68,3 @@ plt.figure()
 plt.title(f"Cost, mpc horizon: {mpc_config['horizon']}")
 plt.plot(costs)
 plt.savefig("plots/gru_mpc_cost.png")
-print('gru_mpc_cost plot saved')
