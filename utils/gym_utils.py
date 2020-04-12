@@ -73,6 +73,7 @@ def generate_torch_training_data(env, samples, horizon=1, filename=None):
             state = next_state
             if done:
                 env.reset()
+                env.set_state(env.sample_state())
     
     if filename:
         torch.save(states, filename + "states.pt")

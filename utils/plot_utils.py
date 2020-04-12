@@ -44,10 +44,6 @@ def generate_video(imgs, filename):
                duration=100,
                loop=5)
 
-
-    
-
-
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
     y_smooth = np.convolve(y, box, mode='valid')

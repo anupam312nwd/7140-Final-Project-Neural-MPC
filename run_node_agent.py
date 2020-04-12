@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 model_path = "agents/models/node_model.pth"
 
 env = AcrobotEnv()
@@ -38,27 +39,31 @@ else:
 
     plt.figure()
     plt.title("Loss history, smoothed over 100 step window")
-    plt.plot(smooth(hist, 100))
-    plt.savefig("plots/node_train.png")
+    plt.plot(smooth(hist[:, 0], 200))
+    plt.plot(smooth(hist[:, 1], 200))
+    plt.savefig("plots/node_test_train.png")
+    np.save("data/node_train_loss.npy", hist[:, 0])
+    np.save("data/node_test_loss.npy", hist[:, 1])
 
 test_loss = 0
 with torch.no_grad():
     test_loss = test(model, env)
-print(f"Test loss: {test_loss}")
 
 # Run mpc with learned model
 mpc_config = {
     "action_size": env.action_space.n,
     "state_size": 4,
-    "horizon": 10, 
-    "iters": 2,
+    "horizon": 50, 
+    "iters": 5,
     "num_candidates": 4,
     "max_iters": 100,
 }
 
-states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(s[0]) + np.linalg.norm(s[1]), mpc_config, env)
+states, costs = run_mpc(model.predict_horizon, lambda s: np.linalg.norm(-np.cos(s[0]) - np.cos(s[1] + s[0]) - 1), mpc_config, env)
 
 plt.figure()
 plt.title(f"Cost, mpc horizon: {mpc_config['horizon']}")
-plt.plot(costs)
+plt.plot(smooth(costs, 10))
+plt.xlabel("Environment Step")
+plt.ylabel("Cost (Distance from swing up)")
 plt.savefig("plots/node_mpc_cost.png")
