@@ -154,11 +154,29 @@ def test(model_nn, env, video=False):
         states_nn[:, i] = ns_nn
 
 
-    plt.figure()
-    plt.title("State 0 over 10 steps, true vs nn model")
-    plt.plot(states_true[0, :], label="theta_true")
-    plt.plot(states_nn[0, :].detach(), label="theta_nn")
-    plt.legend()
+    fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(2, 2)
+    fig.suptitle(f"ANN: Predictions over {horizon} steps")
+
+    ax0.plot(states_true[0, :], label="True")
+    ax0.plot(states_nn[0, :].detach(), label="Predicted")
+    ax0.set_title(r'$\theta_0$')
+
+    ax1.plot(states_true[1, :], label="True")
+    ax1.plot(states_nn[1, :].detach(), label="Predicted")
+    ax1.legend(loc="lower right")
+    ax1.set_title(r'$\theta_1$')
+
+    ax2.plot(states_true[2, :], label="True")
+    ax2.plot(states_nn[2, :].detach(), label="Predicted")
+    ax2.set_title(r'$\dot{\theta}_0$')
+
+    a = ax3.plot(states_true[0, :], label="True")
+    b = ax3.plot(states_nn[0, :].detach(), label="Predicted")
+    ax3.set_title(r'$\dot{\theta}_1$')
+
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.88)
+
     plt.savefig("plots/ann_train_true_compare.png")
 
     if video:
