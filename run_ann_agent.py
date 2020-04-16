@@ -48,7 +48,7 @@ else:
 
 test_loss = 0
 with torch.no_grad():
-    test_loss = test(model, env, video=True)
+    test_loss = test(model, env, video=False)
 
 print(f"Test loss: {test_loss}")
 
