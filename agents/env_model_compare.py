@@ -5,28 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils.gym_utils import generate_training_data
 from test_torchgru import vGRU
-# %matplotlib inline
-
-# data_states = np.load('data/trial1_states.npy')
-# data_actions = np.load('data/trial1_actions.npy')
-# data_next_states = np.load('data/trial1_next_states.npy')
-
-# input_data = torch.from_numpy(np.concatenate((data_states, data_actions), axis = 1))
-# output_data = torch.from_numpy(data_next_states)
-
-# N = input_data.shape[0]
-# print(N)
-
-# data = []
-# for i in range(N):
-#     data.append((input_data[i], output_data[i]))
-
-# print(len(data))
-
-# train_data = data[:int(2*N/3)]
-# test_data = data[int(2*N/3):]
-
-# print(len(train_data), len(test_data))
 
 
 model = vGRU()

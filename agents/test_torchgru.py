@@ -116,33 +116,3 @@ plt.show()
 
 torch.save(model.state_dict(), 'node_agent/sample_torchgru.pt')
 
-
-# if __name__ == '__main__':
-
-#     ii = 0
-
-#     model = LSTM()
-#     criterion = nn.MSELoss()
-#     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-#     end = time.time()
-
-#     for itr in range(1, args.niters + 1):
-#         optimizer.zero_grad()
-#         batch_y0, batch_t, batch_y = get_batch()
-#         pred_y = model.forward()
-#         loss = criterion(pred_y, batch_y)
-#         loss.backward()
-#         optimizer.step()
-
-#         time_meter.update(time.time() - end)
-#         loss_meter.update(loss.item())
-
-#         if itr % args.test_freq == 0:
-#             with torch.no_grad():
-#                 pred_y = model.forward()
-#                 loss = criterion(pred_y, true_y)
-#                 print('Iter {:04d} | Total Loss {:.6f}'.format(itr, loss.item()))
-#                 visualize(true_y, pred_y, func, ii)
-#                 ii += 1
-
-#         end = time.time()

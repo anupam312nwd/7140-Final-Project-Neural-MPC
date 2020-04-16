@@ -1,4 +1,5 @@
 """GRU training model update"""
+from utils.plot_utils import generate_video
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,6 +40,20 @@ class vGRU(nn.Module):
         # print(pred.shape)            # [1, 64, 4]
         return pred[-1], hidden   # we only care about the last prediction
 
+    def predict_horizon(self, state, action_sequence):
+        horizon = len(action_sequence)
+        state = torch.Tensor(state)
+        states = torch.zeros((state.shape[0], horizon))
+        hidden = torch.zeros(1, 1, self.hidden_size)
+        for i, a in enumerate(action_sequence):
+            s_augmented = torch.cat((state, torch.Tensor([a]).float()))
+            # ns = odeint(self, s_augmented, torch.Tensor([0, 0.2]))[1, :4]
+            ns, hidden = model(s_augmented.view(1, 1, 5).float(), hidden)
+
+            states[:, i] = ns
+            state = ns[0]
+
+        return states.detach().numpy()
 
 model = vGRU()
 print(model)
@@ -90,6 +105,7 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
             seq = seq.view(1, 64, 5)
             pred_state, hidden = model(seq.float(), hidden)
             loss = criterion(pred_state.float(), next_state_batch.squeeze(1).float())
+            # if it in {0, 1}: print(pred_state.shape, next_state_batch.shape)
             sum_loss += loss
             loss.backward()
             optimizer.step()
@@ -117,57 +133,73 @@ def train(model, data, config={"horizon": 1, "iters": 1000, "batch_size": 32}):
 
     print("Done!")
 
-    torch.save(model.state_dict(), "agents/models/node_model.pth")
+    torch.save(model.state_dict(), "agents/models/gru_model.pth")
     return loss_history_train, loss_history_test, model
 
 
-def test(model_nn, env):
+def test(model_nn, env, video=False):
     horizon = 100
     actions = torch.randint(0, env.action_space.n, (horizon,))  # [100]
 
     env.reset()
 
-    state_true = torch.Tensor(env._get_state())  # [4]
     state_nn = torch.Tensor(env._get_state())
-
-    # model.hidden = (torch.zeros(1, model.batch_size, model.hidden_size))
-
     states_true = torch.zeros((4, horizon))  # [4, 100]
     states_nn = torch.zeros((4, horizon))
 
+    imgs = []
+    if video:
+        imgs.append(env.render_state(state_nn.detach().numpy()))
+
     hidden = model.hidden
     for i, a in enumerate(actions):
-
-        s_true_augmented = torch.cat((state_true.float(), a.unsqueeze(0).float()))
+        # Step learned model 
         s_nn_augmented = torch.cat((state_nn.float(), a.unsqueeze(0).float()))
-        # ns_true = odeint(env.dynamics, s_true_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        # ns_nn = odeint(model_nn, s_nn_augmented, torch.Tensor([0, env.dt]))[1, :4]
-        # ns_true, _, _, _ = env.step(a)
+        ns_nn, hidden = model(s_nn_augmented.view(1, 1, 5).float(), hidden)
 
-        if i == 0:
-            ns_true = env.model(env._get_state(), a)
-        else:
-            ns_true = env.model(ns_true, a)
-        ns_true = torch.Tensor(ns_true)
-        # print('s_nn_augmented', s_nn_augmented.shape)  # torch.Size([5])
-        with torch.no_grad():
-            # ns_nn, hidden = model(s_nn_augmented.view(1, 1, 5).float(), hidden)
-            # hidden = model.hidden  # to check test_output again
-            ns_nn, hidden = model(s_true_augmented.view(1, 1, 5).float(), hidden)
+        # Step true model
+        env.step(a)
+        ns_true = env._get_state()
+        ns_true = torch.from_numpy(ns_true)
+
+        if video:
+            imgs.append(env.render_state(ns_true.detach().numpy()))
+
+        # Save state to feed into model
+        state_nn = ns_nn[0]
 
         states_true[:, i] = ns_true
         states_nn[:, i] = ns_nn
 
-        state_true = ns_true
-        # state_nn = ns_nn[0]
-        state_nn = ns_true
-        # print('state_nn', state_nn)
 
-    plt.figure()
-    plt.title("State 0 over 10 steps, true vs nn model")
-    plt.plot(states_true[0, :], label="theta_true")
-    plt.plot(states_nn[0, :].detach(), label="theta_nn")
-    plt.legend()
+    fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(2, 2)
+    fig.suptitle(f"GRU: Predictions over {horizon} steps")
+
+    ax0.plot(states_true[0, :], label="True")
+    ax0.plot(states_nn[0, :].detach(), label="Predicted")
+    ax0.set_title(r'$\theta_0$')
+
+    ax1.plot(states_true[1, :], label="True")
+    ax1.plot(states_nn[1, :].detach(), label="Predicted")
+    ax1.legend(loc="lower right")
+    ax1.set_title(r'$\theta_1$')
+
+    ax2.plot(states_true[2, :], label="True")
+    ax2.plot(states_nn[2, :].detach(), label="Predicted")
+    ax2.set_title(r'$\dot{\theta}_0$')
+
+    a = ax3.plot(states_true[0, :], label="True")
+    b = ax3.plot(states_nn[0, :].detach(), label="Predicted")
+    ax3.set_title(r'$\dot{\theta}_1$')
+
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.88)
+
     plt.savefig("plots/gru_train_true_compare.png")
 
-    return (state_true - state_nn).pow(2) / state_true.shape[0]
+    if video:
+        print("Generating test video...")
+        generate_video(imgs, "plots/gru_test_video.gif")
+        print("Done.")
+        env.close()
+    return np.linalg.norm(ns_true - ns_nn)
