@@ -42,7 +42,7 @@ def generate_video(imgs, filename):
                save_all=True,
                append_images=pil_imgs[1:],
                duration=100,
-               loop=5)
+               loop=0)
 
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
