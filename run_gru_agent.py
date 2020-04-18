@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from agents.gru_trainv2 import vGRU, train, test
+from agents.gru_train import vGRU, train, test
 from utils.acrobot_env import AcrobotEnv
 from utils.gym_utils import generate_torch_training_data
 from utils.plot_utils import smooth
